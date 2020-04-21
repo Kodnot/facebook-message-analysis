@@ -1,14 +1,13 @@
 # facebook-message-analysis
 
 1. Download your Facebook messenger history from your Facebook settings. 
-[More here.](https://webapps.stackexchange.com/questions/27640/how-can-i-download-all-messages-from-facebook)
+[More here.](https://www.zapptales.com/en/download-facebook-messenger-chat-history-how-to/)
 2. Unzip your data into the directory of your choice.
-3. Identify a person whose chat history you want to analyze.
-4. Find the JSON file listing all of their messages with you (named after their username).
-    1. We will refer to this file's path as **${FILE}**.
+3. Identify a person whose chat history you want to analyze (if you want to run analysis for a single person) and copy the path to his subdirectory, or copy the path to the root data directory.
+    1. We will refer to this folder's path as **${FOLDER}**.
 5. Clone this repository and change directory into it.
 ```
-git clone https://github.com/dmhacker/facebook-message-analysis && cd facebook-message-analysis
+git clone https://github.com/Kodnot/facebook-message-analysis.git && cd facebook-message-analysis
 ```
 6. Install any dependencies.
 ```
@@ -24,7 +23,7 @@ python
 ```
 8. Run the analyzer.
 ```
-python fbmessages ${FILE}
+python fbmessages ${FOLDER}
 ```
 
 In a few seconds, you should get some nice visualizations. Have fun!
