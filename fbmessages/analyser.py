@@ -12,46 +12,71 @@ import string
 import time
 import json
 import copy
+import os
+import glob
 
+# Aggregate results for one conversation
+class ConvoStats:
+    def __init__(self, title):
+        self.title = title
+        self.countsBySender = defaultdict(int)
+        self.initiationsBySender = defaultdict(int)
+        self.totalMessages = 0
+        
+    def __str__(self):
+        rez = f'Convo: {self.title}, total messages: {self.totalMessages}\n'
+        for key, val in sorted(self.countsBySender.items(), key=lambda p: p[1], reverse=True):
+            rez += f'{key} sent {val} messages, {val/self.totalMessages*100}% of total messages\n'
+
+        totalStartedConvos = sum(self.initiationsBySender.values())
+        for key, val in sorted(self.initiationsBySender.items(), key=lambda p: p[1], reverse=True):
+            rez += f'{key} initiated {val} conversations, {val/totalStartedConvos*100}% of total\n'
+        return rez
 
 english_stopwords = set(stopwords.words('english'))
 sentiment_analyzer = SentimentIntensityAnalyzer()
-cache = {}
 
 
-def _load_messages(filename):
-    if filename in cache:
-        return cache[filename]
-    else:
+# loads messages from files in filenames (message files may be split into multiple files)
+def _load_messages(filenames):
+    data = None
+    for filename in filenames:
         with open(filename) as jsonfile:
-            data = json.load(jsonfile)
-            cache[filename] = data
-            return data
+            tData = json.load(jsonfile)
+            if data is None:
+                data = tData
+            else:
+                data['messages'] += tData['messages']
+    return data
 
 
-def get_messages(filename, copy_from_cache=True):
-    data = _load_messages(filename)
-
+def get_messages(data):
     # Copy the stored messages we have
     copied_messages = data['messages']
-    if copy_from_cache:
-        copied_messages = copy.deepcopy(data['messages'])
 
     # Return a sorted list of messages by time
     return sorted(copied_messages, key=lambda message : message['timestamp_ms'])
 
 
-def analyze(filename):
+def analyze(filenames):
     # Load messages
-    print('Reading file {0} ...'.format(filename))
+    print(f'Reading files {filenames} ...')
     timestamp = time.perf_counter()
-    messages = get_messages(filename, copy_from_cache=False)
+    data = _load_messages(filenames)
+    messages = get_messages(data)
     print('Loaded {0} messages in {1:.2f} seconds.'.format(len(messages), time.perf_counter() - timestamp))
+    
+    # To avoid issues, convos with <10 messages will be ignored
+    if len(messages) < 10:
+        print(f'Conversation {data["title"]} is ignored due to small size')
+        return None
 
     print('Aggregating data ...')
     timestamp = time.perf_counter()
 
     # Data structures to hold information about the messages 
+    countsBySender = defaultdict(int)
+    initiationsBySender = defaultdict(int)
     daily_counts = defaultdict(int)
     daily_sticker_counts = defaultdict(int)
     daily_sentiments = defaultdict(float)
@@ -64,19 +89,25 @@ def analyze(filename):
     last_date = None 
 
     # Extract information from the messages 
-    for message in messages:
+    for id, message in enumerate(messages):
         # Convert message's Unix timestamp to local datetime
         date = datetime.datetime.fromtimestamp(message['timestamp_ms']/1000.0)
         month = date.strftime('%Y-%m')
         day = date.strftime('%Y-%m-%d')
         day_name = date.strftime('%A')
         hour = date.time().hour
-
-        # Get content in message if it has any
-        if 'content' in message:
-            content = unidecode(message['content'])
+        
+        # track who initiated the conversations how many times
+        # TODO: The first person to start the conversation is not counted, but there is so much data that it does not matter
+        if id != 0:
+            timeDiff = date - datetime.datetime.fromtimestamp(messages[id-1]['timestamp_ms']/1000.0)
+            # It is assumed that if 4h passed since last message, a new conversation has been initiated
+            hoursPassed = timeDiff.total_seconds() // (60*60)
+            if hoursPassed >= 4:
+                initiationsBySender[message['sender_name']] += 1
 
         # Increment message counts
+        countsBySender[message['sender_name']] += 1
         hourly_counts[hour] += 1 
         day_name_counts[day_name] += 1 
         daily_counts[day] += 1
@@ -85,12 +116,13 @@ def analyze(filename):
             daily_sticker_counts[day] += 1
             monthly_sticker_counts[month] += 1
 
-        # Rudimentary sentiment analysis using VADER
-        sentiments = sentiment_analyzer.polarity_scores(content)
-        daily_sentiments[day] += sentiments['pos'] - sentiments['neg']
-
-        # Determine word frequencies
-        if content: 
+        # Process content of the message if it has any
+        if 'content' in message: 
+            content = unidecode(message['content'])
+            # Rudimentary sentiment analysis using VADER
+            sentiments = sentiment_analyzer.polarity_scores(content)
+            daily_sentiments[day] += sentiments['pos'] - sentiments['neg']
+                
             # Split message up by spaces to get individual words
             for word in content.split(' '):
                 # Make the word lowercase and strip it of punctuation
@@ -115,13 +147,18 @@ def analyze(filename):
         daily_sentiments[day] /= message_count
 
     # Get the number of days the messages span over
-    num_days = (last_date - first_date).days
+    num_days = max((last_date - first_date).days, 1)
 
     # Get most common words
     top_words = heapq.nlargest(42, word_frequencies.items(), key=itemgetter(1)) 
 
     print('Processed data in {0:.2f} seconds.'.format(time.perf_counter() - timestamp))
-
+    
+    rezStats = ConvoStats(data['title'])
+    rezStats.countsBySender = countsBySender
+    rezStats.initiationsBySender = initiationsBySender
+    rezStats.totalMessages = len(messages)
+    
     print('Preparing data for display ...')
 
     # Format data for graphing
@@ -142,7 +179,7 @@ def analyze(filename):
     print('Displaying ...')
 
     # Generate subplots
-    fig, ax_array = plt.subplots(2, 3)
+    # fig, ax_array = plt.subplots(2, 3)
 
     def show_daily_total_graph(ax, xdata, ydata, ydata_stickers):
         indices = np.arange(len(xdata))
@@ -269,14 +306,26 @@ def analyze(filename):
         ax.set_yticklabels(xdata)
 
     # Call the graphing methods
-    show_daily_total_graph(ax_array[0][0], xdata_daily, ydata_daily, ydata_daily_stickers)
-    show_monthly_total_graph(ax_array[0][1], xdata_monthly, ydata_monthly, ydata_monthly_stickers)
-    show_daily_sentiment_graph(ax_array[0][2], xdata_sentiment, ydata_sentiment)
-    show_day_name_average_graph(ax_array[1][0], xdata_day_name, ydata_day_name)
-    show_hourly_average_graph(ax_array[1][1], xdata_hourly, ydata_hourly)
-    show_top_words_graph(ax_array[1][2], xdata_top_words[::-1], ydata_top_words[::-1])
+    # show_daily_total_graph(ax_array[0][0], xdata_daily, ydata_daily, ydata_daily_stickers)
+    # show_monthly_total_graph(ax_array[0][1], xdata_monthly, ydata_monthly, ydata_monthly_stickers)
+    # show_daily_sentiment_graph(ax_array[0][2], xdata_sentiment, ydata_sentiment)
+    # show_day_name_average_graph(ax_array[1][0], xdata_day_name, ydata_day_name)
+    # show_hourly_average_graph(ax_array[1][1], xdata_hourly, ydata_hourly)
+    # show_top_words_graph(ax_array[1][2], xdata_top_words[::-1], ydata_top_words[::-1])
 
     # Display the plots
-    plt.show()
+    # plt.show()
 
     print('Done.')
+    
+    return rezStats
+
+def analyseAll(folderName):
+    rez=[]
+    for dirName, subdirList, fileList in os.walk(folderName):
+        messageFiles = glob.glob(os.path.join(dirName, 'message*'))
+        if len(messageFiles) > 0:
+            convoStats = analyze(messageFiles)
+            if convoStats is not None:
+                rez.append(convoStats)
+    return sorted(rez, key=lambda dt: dt.totalMessages, reverse=True)

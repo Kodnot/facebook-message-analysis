@@ -1,0 +1,20 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            // KaroleKavaliauskaite_eb_pigtt_w\\message_1.json
+            // RutaPetkeviciute_STzoKh4NsA\\message_comb.json
+            // VytautasGarliauskas_yc2NJgzemA\\message_combined.json
+            // Dainius old?: FacebookUser_hAdJBO2xXg
+            "args": ["C:\\Users\\audri\\Downloads\\facebook-audriusliuberskis\\messages\\inbox\\RutaPetkeviciute_STzoKh4NsA"]
+        }
+    ]
+}
