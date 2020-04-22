@@ -2,3 +2,5 @@ unidecode
 matplotlib
 nltk
 vaderSentiment
+bokeh
+ipython

@@ -4,6 +4,9 @@ from operator import itemgetter
 from nltk.corpus import stopwords
 from unidecode import unidecode
 
+from bokeh.plotting import figure
+from bokeh.io import show
+
 import numpy as np
 import matplotlib.pyplot as plt
 import datetime
@@ -22,6 +25,8 @@ class ConvoStats:
         self.countsBySender = defaultdict(int)
         self.initiationsBySender = defaultdict(int)
         self.totalMessages = 0
+        self.dailyCountsBySender = {}
+        
         
     def __str__(self):
         rez = f'Convo: {self.title}, total messages: {self.totalMessages}\n'
@@ -78,6 +83,9 @@ def analyze(filenames):
     countsBySender = defaultdict(int)
     initiationsBySender = defaultdict(int)
     daily_counts = defaultdict(int)
+    
+    dailyCountsBySender = {}
+    
     daily_sticker_counts = defaultdict(int)
     daily_sentiments = defaultdict(float)
     monthly_counts = defaultdict(int)
@@ -111,6 +119,11 @@ def analyze(filenames):
         hourly_counts[hour] += 1 
         day_name_counts[day_name] += 1 
         daily_counts[day] += 1
+        
+        if day not in dailyCountsBySender:
+            dailyCountsBySender[day] = defaultdict(int)
+        dailyCountsBySender[day][message['sender_name']] += 1
+
         monthly_counts[month] += 1
         if 'sticker' in message:
             daily_sticker_counts[day] += 1
@@ -158,6 +171,7 @@ def analyze(filenames):
     rezStats.countsBySender = countsBySender
     rezStats.initiationsBySender = initiationsBySender
     rezStats.totalMessages = len(messages)
+    rezStats.dailyCountsBySender = dailyCountsBySender
     
     print('Preparing data for display ...')
 
