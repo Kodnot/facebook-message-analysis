@@ -51,6 +51,10 @@ class ConvoStats:
 english_stopwords = set(stopwords.words('english'))
 sentiment_analyzer = SentimentIntensityAnalyzer()
 
+# The unicode in the json files is misformatted: https://stackoverflow.com/questions/50004087/converting-unicode-string-to-utf-8
+def parse_utf8(s):
+    arr = bytearray(map(ord, s))
+    return arr.decode('utf-8')
 
 # loads messages from files in filenames (message files may be split into multiple files)
 def _load_messages(filenames):
@@ -62,6 +66,14 @@ def _load_messages(filenames):
                 data = tData
             else:
                 data['messages'] += tData['messages']
+                
+    # parse unicode
+    data['title'] = parse_utf8(data['title'])
+    
+    for msg in data['messages']:
+        msg['sender_name'] = parse_utf8(msg['sender_name'])
+        if 'content' in msg:
+            msg['content'] = parse_utf8(msg['content'])
     return data
 
 

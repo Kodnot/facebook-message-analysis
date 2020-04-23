@@ -63,7 +63,8 @@ def daily_stats_tab(convoStats):
             tdf = pd.DataFrame()
             tdf['sender'] = [participant]
             tdf['messageCount'] = [len(messages)]
-            tdf['messageCountAngle'] = [len(messages)/len(allMessages) * 2*pi]
+            # The +1/+2 is to avoid division by zero if no messages are present in the interval
+            tdf['messageCountAngle'] = [(len(messages) + 1)/(len(allMessages) + 2) * 2*pi]
             tdf['color'] = color[i]
             df = df.append(tdf)
 
