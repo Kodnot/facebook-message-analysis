@@ -1,3 +1,5 @@
+import argparse
+
 from bokeh.io import curdoc
 from bokeh.models.widgets import Tabs
 
@@ -6,8 +8,11 @@ from scripts.analyser import analyseAll
 # tabs
 from scripts.daily_stats import daily_stats_tab
 
+parser = argparse.ArgumentParser(description='Tool to analyze your Facebook Messenger history')
+parser.add_argument('folder', help='The folder containing Facebook chat messages in JSON format, or a folder of such folders')
 
-allConvoStats = analyseAll("C:\\TMP\\fbMessages")
+args = parser.parse_args()
+allConvoStats = analyseAll(args.folder)
 
 tab1 = daily_stats_tab(allConvoStats)
 
