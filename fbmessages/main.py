@@ -12,7 +12,7 @@ from scripts.daily_stats import daily_stats_tab
 from scripts.total_stats import total_stats_tab
 
 # attach to VS Code debugger if this script was run with BOKEH_VS_DEBUG=true
-if os.environ['BOKEH_VS_DEBUG'] == 'true':
+if 'BOKEH_VS_DEBUG' in os.environ and os.environ['BOKEH_VS_DEBUG'] == 'true':
     # 5678 is the default attach port in the VS Code debug configurations
     print('Waiting for debugger attach')
     ptvsd.enable_attach(address=('localhost', 5678), redirect_output=True)
