@@ -23,12 +23,13 @@ def daily_stats_tab(convoStats):
             (x for x in convoStats if x.title == convoTitle))
         participants = list(convo.countsBySender.keys())
         participantToId = {x: i for i, x in enumerate(participants)}
+        totalsId = len(participants)
 
-        xs = [[] for _ in participants]
-        ys = [[] for _ in participants]
+        xs = [[] for _ in participants] + [[]]
+        ys = [[] for _ in participants] + [[]]
         color = Category10_7 if len(participants) <= 7 else Turbo256
-        colors = [color[i] for i in range(len(participants))]
-        labels = participants
+        colors = [color[i] for i in range(len(participants)+1)]
+        labels = participants + ['total']
 
         for date in convo.dailyCountsBySender.keys():
             convertedDate = pd.to_datetime(date)
@@ -40,6 +41,9 @@ def daily_stats_tab(convoStats):
 
                 xs[participantId].append(convertedDate)
                 ys[participantId].append(count)
+                
+            xs[totalsId].append(convertedDate)
+            ys[totalsId].append(sum(convo.dailyCountsBySender[date].values()))
 
         return ColumnDataSource(data={'x': xs, 'y': ys, 'color': colors, 'label': labels})
 
@@ -64,7 +68,8 @@ def daily_stats_tab(convoStats):
             tdf['sender'] = [participant]
             tdf['messageCount'] = [len(messages)]
             # The +1/+2 is to avoid division by zero if no messages are present in the interval
-            tdf['messageCountAngle'] = [(len(messages) + 1)/(len(allMessages) + 2) * 2*pi]
+            tdf['messageCountAngle'] = [
+                (len(messages) + 1)/(len(allMessages) + 2) * 2*pi]
             tdf['color'] = color[i]
             df = df.append(tdf)
 
@@ -75,11 +80,11 @@ def daily_stats_tab(convoStats):
                    x_axis_type='datetime', x_axis_label='Date', y_axis_label='Message count')
 
         p.multi_line(xs='x', ys='y', source=src, color='color',
-                     line_width=3, legend_field='label', line_alpha=0.6)
+                     line_width=3, legend_field='label', line_alpha=0.4)
 
         # TODO: Don't know how to get the value of the multiline line, workaround with scatterplot on top?
         # TODO: That would also work better with the dates, because now I have misleading tooltips
-        hover = HoverTool(tooltips=[('Sender', '@label'),
+        hover = HoverTool(tooltips=[('Count from', '@label'),
                                     ('Date', '$x{%F}'),
                                     ('Message count:', '???')],
                           formatters={'$x': 'datetime'},
@@ -115,7 +120,7 @@ def daily_stats_tab(convoStats):
         dateSlider.start = start
         dateSlider.end = end
         dateSlider.value = (start, end)
-        
+
         # TODO: There is some black magic going on here, find if there is a proper way to do this
         newScr = make_timeseries_dataset(newValue)
         src.data.update(newScr.data)
@@ -125,7 +130,7 @@ def daily_stats_tab(convoStats):
     def on_date_range_changed(attr, old, new):
         convoToPlot = convoSelection.value
         startDate, endDate = dateSlider.value_as_date
-        
+
         # TODO: There is some black magic going on here, find if there is a proper way to do this
         new_src = make_timeseries_dataset(convoToPlot, startDate, endDate)
         src.data.update(new_src.data)
