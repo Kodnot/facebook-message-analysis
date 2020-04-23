@@ -57,10 +57,10 @@ def total_stats_tab(convoStats):
 
     # A dropdown list to select a conversation
     convoSelection = CheckboxGroup(
-        labels=conversationTitles, active=list(range(len(conversationTitles))))
+        labels=conversationTitles, active=[0])
     convoSelection.on_change('active', on_conversation_selection_changed)
 
-    src = make_dataset(conversationTitles)
+    src = make_dataset(conversationTitles[:1])
     stats_table = make_table(src)
 
     controls = column(convoSelection)

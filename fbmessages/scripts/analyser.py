@@ -108,8 +108,10 @@ def analyze(filenames):
         hour = date.time().hour
         
         # track who initiated the conversations how many times
-        # TODO: The first person to start the conversation is not counted, but there is so much data that it does not matter
-        if id != 0:
+        if id == 0:
+            # first message, so conversation initiated
+            initiationsBySender[message['sender_name']] += 1
+        else:
             timeDiff = date - datetime.datetime.fromtimestamp(messages[id-1]['timestamp_ms']/1000.0)
             # It is assumed that if 4h passed since last message, a new conversation has been initiated
             hoursPassed = timeDiff.total_seconds() // (60*60)
