@@ -146,7 +146,7 @@ def daily_stats_tab(convoStats):
     end = pd.to_datetime(initialDates[-1]).date()
     dateSlider = DateRangeSlider(
         title='Date interval:', start=start, end=date.today(), value=(start, end), step=1)
-    dateSlider.on_change('value', on_date_range_changed)
+    dateSlider.on_change('value_throttled', on_date_range_changed)
 
     src = make_timeseries_dataset(conversationTitles[0], start, end)
     p = make_timeseries_plot(src)
