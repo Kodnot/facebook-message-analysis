@@ -73,7 +73,9 @@ def analyze(filenames):
     
     # To avoid issues, convos with <10 messages will be ignored
     if len(messages) < 10:
-        print(f'Conversation {data["title"]} is ignored due to small size')
+        # TODO: Commented this out due to some bogus encoding error, investigate later
+        # TODO: (Might go away if I fix my data encodings right after reading it, it's a mess rn)
+        # print(f'Conversation {data["title"]} is ignored due to small size')
         return None
 
     print('Aggregating data ...')

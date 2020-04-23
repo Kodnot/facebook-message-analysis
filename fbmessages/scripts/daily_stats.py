@@ -7,7 +7,7 @@ from bokeh.layouts import column, row
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource, HoverTool, Select, Panel, DateRangeSlider
 
-from bokeh.palettes import Category20_16
+from bokeh.palettes import Category10_7, Turbo256
 from bokeh.io import show, output_notebook
 
 from scripts.plot_style import style
@@ -25,7 +25,8 @@ def daily_stats_tab(convoStats: ConvoStats):
 
         xs = [[] for _ in participants]
         ys = [[] for _ in participants]
-        colors = [Category20_16[i] for i in range(len(participants))]
+        color = Category10_7 if len(participants) <= 7 else Turbo256
+        colors = [color[i] for i in range(len(participants))]
         labels = participants
 
         for date in convo.dailyCountsBySender.keys():
@@ -46,9 +47,10 @@ def daily_stats_tab(convoStats: ConvoStats):
                    x_axis_type='datetime', x_axis_label='Date', y_axis_label='Message count')
 
         p.multi_line(xs='x', ys='y', source=src, color='color',
-                     line_width=2, legend_field='label')
+                     line_width=3, legend_field='label', line_alpha=0.6)
 
         # TODO: Don't know how to get the value of the multiline line, workaround with scatterplot on top?
+        # TODO: That would also work better with the dates, because now I have misleading tooltips
         hover = HoverTool(tooltips=[('Sender', '@label'),
                                     ('Date', '$x{%F}'),
                                     ('Message count:', '???')],
