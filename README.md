@@ -22,9 +22,9 @@ python
 >>> nltk.download('stopwords')
 >>> quit()
 ```
-8. Run the analyzer.
+8. Launch the bokeh app locally
 ```
-python fbmessages ${FILE}
+bokeh serve --show fbmessages/
 ```
 
 In a few seconds, you should get some nice visualizations. Have fun!

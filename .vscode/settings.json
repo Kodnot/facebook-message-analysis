@@ -1,4 +1,10 @@
 {
     "python.pythonPath": "env\\Scripts\\python.exe",
-    "python.envFile": "${workspaceFolder}/.env"
+    "python.envFile": "${workspaceFolder}/.env",
+    "spellright.language": [
+        "en"
+    ],
+    "spellright.documentTypes": [
+        "latex"
+    ]
 }
