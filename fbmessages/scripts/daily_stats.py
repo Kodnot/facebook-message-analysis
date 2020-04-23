@@ -8,13 +8,12 @@ from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource, HoverTool, Select, Panel, DateRangeSlider
 
 from bokeh.palettes import Category10_7, Turbo256
-from bokeh.io import show, output_notebook
 
 from scripts.plot_style import style
 from scripts.analyser import ConvoStats
 
 
-def daily_stats_tab(convoStats: ConvoStats):
+def daily_stats_tab(convoStats):
 
     # Daily by-party and total message counts
     def make_dataset(convoTitle, startDate=None, endDate=None):
