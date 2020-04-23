@@ -41,7 +41,7 @@ def daily_stats_tab(convoStats):
 
                 xs[participantId].append(convertedDate)
                 ys[participantId].append(count)
-                
+
             xs[totalsId].append(convertedDate)
             ys[totalsId].append(sum(convo.dailyCountsBySender[date].values()))
 
@@ -52,24 +52,33 @@ def daily_stats_tab(convoStats):
             (x for x in convoStats if x.title == convoTitle))
 
         df = pd.DataFrame(columns=[
-                          'sender', 'messageCount', 'messageCountAngle', 'color'])
+                          'sender', 'messageCount', 'messageCountAngle', 'f_messageCount', 'wordCount', 'wordCountAngle', 'f_wordCount', 'color'])
         color = Category10_7 if len(convo.countsBySender) <= 7 else Turbo256
+
+        allMessages = convo.messages
+        if startDate is not None and endDate is not None:
+            allMessages = list(filter(lambda m: m.datetime.date() >=
+                                      startDate and m.datetime.date() <= endDate, allMessages))
+        totalWordCount = sum(len(x.content.split()) for x in allMessages)
+        participantCount = len(list(convo.countsBySender.keys()))
+
         for i, participant in enumerate(convo.countsBySender.keys()):
-            allMessages = convo.messages
             messages = list(filter(lambda m: m.sender ==
-                                   participant, convo.messages))
-            if startDate is not None and endDate is not None:
-                messages = list(filter(lambda m: m.datetime.date() >=
-                                       startDate and m.datetime.date() <= endDate, messages))
-                allMessages = list(filter(lambda m: m.datetime.date() >=
-                                          startDate and m.datetime.date() <= endDate, allMessages))
+                                   participant, allMessages))
 
             tdf = pd.DataFrame()
             tdf['sender'] = [participant]
             tdf['messageCount'] = [len(messages)]
             # The +1/+2 is to avoid division by zero if no messages are present in the interval
             tdf['messageCountAngle'] = [
-                (len(messages) + 1)/(len(allMessages) + 2) * 2*pi]
+                (len(messages) + 1)/(len(allMessages) + participantCount) * 2*pi]
+            tdf['f_messageCount'] = [
+                f'{len(messages)} messages ({len(messages)/len(allMessages)*100:.2f}%)']
+            tdf['wordCount'] = [sum(len(x.content.split()) for x in messages)]
+            tdf['wordCountAngle'] = [
+                (tdf['wordCount'][0] + 1) / (totalWordCount + participantCount) * 2*pi]
+            tdf['f_wordCount'] = [
+                f'{tdf["wordCount"][0]} words ({tdf["wordCount"][0]/totalWordCount*100:.2f}%)']
             tdf['color'] = color[i]
             df = df.append(tdf)
 
@@ -93,21 +102,29 @@ def daily_stats_tab(convoStats):
 
         return p
 
-    def make_piechart_plots(src):
+    def _make_piechart(src, startAngle, endAngle, tooltips):
         p = figure(plot_height=200, plot_width=200,
                    toolbar_location=None, title='Messages sent by participant')
 
-        p.wedge(x=0, y=1, radius=0.8, start_angle=cumsum('messageCountAngle', include_zero=True),
-                end_angle=cumsum('messageCountAngle'), line_color='white', fill_color='color', source=src)
+        p.wedge(x=0, y=1, radius=0.8, start_angle=startAngle,
+                end_angle=endAngle, line_color='white', fill_color='color', source=src)
         p.axis.axis_label = None
         p.axis.visible = False
         p.grid.grid_line_color = None
 
-        hover = HoverTool(
-            tooltips=[('Sender', '@sender'), ('Message count', '@messageCount')])
+        hover = HoverTool(tooltips=tooltips)
         p.add_tools(hover)
 
-        return column(p)
+        return p
+
+    def make_piechart_plots(src):
+        p1 = _make_piechart(src, cumsum('messageCountAngle', include_zero=True), cumsum('messageCountAngle'),
+                            [('Sender', '@sender'), ('Message count', '@f_messageCount')])
+
+        p2 = _make_piechart(src, cumsum('wordCountAngle', include_zero=True), cumsum('wordCountAngle'),
+                            [('Sender', '@sender'), ('Word count', '@f_wordCount')])
+
+        return column(p1, p2)
 
     def on_conversation_changed(attr, oldValue, newValue):
         convo: analyser.ConvoStats = next(
