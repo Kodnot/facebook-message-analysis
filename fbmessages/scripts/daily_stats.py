@@ -8,7 +8,7 @@ from datetime import date
 from collections import defaultdict
 from bokeh.layouts import column, row
 from bokeh.plotting import figure
-from bokeh.models import ColumnDataSource, HoverTool, Select, Panel, DateRangeSlider, Paragraph
+from bokeh.models import ColumnDataSource, HoverTool, Select, Panel, DateRangeSlider, Paragraph, Title
 from bokeh.transform import cumsum
 
 from bokeh.palettes import Category10_7, Turbo256
@@ -144,7 +144,7 @@ def daily_stats_tab(convoStats):
 
         return p
 
-    def _make_piechart(src, startAngle, endAngle, title, tooltips):
+    def _make_piechart(src, startAngle, endAngle, title, bottomTitle, tooltips):
         p = figure(plot_height=200, plot_width=280,
                    toolbar_location=None, title=title)
 
@@ -157,22 +157,41 @@ def daily_stats_tab(convoStats):
         hover = HoverTool(tooltips=tooltips)
         p.add_tools(hover)
 
+        p.add_layout(Title(text=bottomTitle, align="center"), "below")
+
         return p
 
     def make_piechart_plots(src):
+        totalMessages = sum(src.data["messageCount"])
         p1 = _make_piechart(src, cumsum('messageCountAngle', include_zero=True), cumsum('messageCountAngle'),
-                            'Messages sent by participant',
+                            'Messages sent by participant', f'Total messages: {totalMessages}',
                             [('Participant', '@sender'), ('Message count', '@f_messageCount')])
 
+        totalWords = sum(src.data["wordCount"])
         p2 = _make_piechart(src, cumsum('wordCountAngle', include_zero=True), cumsum('wordCountAngle'),
-                            'Word counts by participant',
+                            'Word counts by participant', f'Total words: {totalWords}',
                             [('Participant', '@sender'), ('Word count', '@f_wordCount')])
 
+        totalInitiations = sum(src.data["initiationCount"])
         p3 = _make_piechart(src, cumsum('initiationCountAngle', include_zero=True), cumsum('initiationCountAngle'),
-                            'Conversations initiated by participant',
+                            'Conversations initiated by participant', f'Total conversations: {totalInitiations}',
                             [('Participant', '@sender'), ('Conversations initiated', '@f_initiationCount')])
 
         return column(p1, p2, p3)
+
+    def _update_pie_bottom_labels():
+        # Update the bottom titles of the piecharts
+        for i, pie in enumerate(piePlots.children):
+            # This is a bit hack-ish, but don't know a better way to do it
+            if i == 0:
+                totalMessages = sum(pieSrc.data["messageCount"])
+                pie.below[1].text = f'Total messages: {totalMessages}'
+            elif i == 1:
+                totalWords = sum(pieSrc.data["wordCount"])
+                pie.below[1].text = f'Total words: {totalWords}'
+            elif i == 2:
+                totalInitiations = sum(pieSrc.data["initiationCount"])
+                pie.below[1].text = f'Total conversations: {totalInitiations}'
 
     def on_conversation_changed(attr, oldValue, newValue):
         convo: analyser.ConvoStats = next(
@@ -192,6 +211,8 @@ def daily_stats_tab(convoStats):
         newPieSrc = make_piechart_dataset(newValue)
         pieSrc.data.update(newPieSrc.data)
 
+        _update_pie_bottom_labels()
+
         messageColumn.children = make_messages_paragraphs(newValue)
 
     def on_date_range_changed(attr, old, new):
@@ -204,7 +225,10 @@ def daily_stats_tab(convoStats):
         newPieSrc = make_piechart_dataset(convoToPlot, startDate, endDate)
         pieSrc.data.update(newPieSrc.data)
 
-        messageColumn.children = make_messages_paragraphs(convoToPlot, startDate, endDate)
+        _update_pie_bottom_labels()
+
+        messageColumn.children = make_messages_paragraphs(
+            convoToPlot, startDate, endDate)
 
     # A dropdown list to select a conversation
     conversationTitles = sorted([x.title for x in convoStats])
@@ -232,7 +256,8 @@ def daily_stats_tab(convoStats):
     messageContents = make_messages_paragraphs(
         conversationTitles[0], start, end)
 
-    messageColumn = column(children=messageContents, height=670, width=310, css_classes=['scrollable'])
+    messageColumn = column(children=messageContents,
+                           height=670, width=310, css_classes=['scrollable'])
     # Wrap all controls with a single element
     controls = column(convoSelection, dateSlider)
     layout = row(controls, p, piePlots, messageColumn)
