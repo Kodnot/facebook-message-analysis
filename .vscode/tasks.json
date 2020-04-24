@@ -7,7 +7,7 @@
             "label": "launch Bokeh server",
             "type": "shell",
             "isBackground": true,
-            "command": "source \".\\env\\Scripts\\activate\" && bokeh serve --show fbmessages/ --args \"C:\\TMP\\fbMessages\"",
+            "command": "source \".\\env\\Scripts\\activate\" && bokeh serve --show fbmessages/ --args \"C:\\TMP\\fbMessages_test\"",
             "options": {
                 "env": {
                     "BOKEH_VS_DEBUG": "true"
