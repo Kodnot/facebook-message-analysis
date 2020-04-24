@@ -8,7 +8,7 @@ from datetime import date
 from collections import defaultdict
 from bokeh.layouts import column, row
 from bokeh.plotting import figure
-from bokeh.models import ColumnDataSource, HoverTool, Select, Panel, DateRangeSlider
+from bokeh.models import ColumnDataSource, HoverTool, Select, Panel, DateRangeSlider, Paragraph
 from bokeh.transform import cumsum
 
 from bokeh.palettes import Category10_7, Turbo256
@@ -78,7 +78,7 @@ def daily_stats_tab(convoStats):
                 if hoursPassed >= 4:
                     initiationsBySender[message.sender] += 1
         totalInitiationCount = sum(initiationsBySender.values())
-        
+
         for i, participant in enumerate(convo.countsBySender.keys()):
             messages = list(filter(lambda m: m.sender ==
                                    participant, allMessages))
@@ -98,12 +98,33 @@ def daily_stats_tab(convoStats):
             tdf['f_wordCount'] = [
                 f'{tdf["wordCount"][0]} words ({tdf["wordCount"][0]/totalWordCount*100:.2f}%)']
             tdf['initiationCount'] = [initiationsBySender[participant]]
-            tdf['initiationCountAngle'] = [initiationsBySender[participant] / totalInitiationCount * 2*pi]
+            tdf['initiationCountAngle'] = [
+                initiationsBySender[participant] / totalInitiationCount * 2*pi]
             tdf['f_initiationCount'] = f'{tdf["initiationCount"][0]} initations ({tdf["initiationCount"][0]/totalInitiationCount*100:.2f}%)'
             tdf['color'] = color[i]
             df = df.append(tdf)
 
         return ColumnDataSource(df)
+
+    def make_messages_paragraphs(convoTitle, startDate=None, endDate=None):
+        convo: analyser.ConvoStats = next(
+            (x for x in convoStats if x.title == convoTitle))
+
+        allMessages = convo.messages
+        if startDate is not None and endDate is not None:
+            allMessages = list(filter(lambda m: m.datetime.date() >=
+                                      startDate and m.datetime.date() <= endDate, allMessages))
+
+        rez = []
+        for i, message in enumerate(allMessages):
+            # TODO: The browser will crawl to a stop if I have too many messages
+            # 500 messages take good 10 seconds to load
+            if i > 100:
+                break
+            rez.append(
+                f'{message.sender} ({message.datetime.strftime("%Y/%m/%d %H:%M")}): {message.content}')
+
+        return [Paragraph(text=x, width=290) for x in rez]
 
     def make_timeseries_plot(src):
         p = figure(plot_width=600, plot_height=600, title='Daily message counts by date',
@@ -146,8 +167,8 @@ def daily_stats_tab(convoStats):
         p2 = _make_piechart(src, cumsum('wordCountAngle', include_zero=True), cumsum('wordCountAngle'),
                             'Word counts by participant',
                             [('Participant', '@sender'), ('Word count', '@f_wordCount')])
-        
-        p3 = _make_piechart(src, cumsum('initiationCountAngle', include_zero=True), cumsum('initiationCountAngle'), 
+
+        p3 = _make_piechart(src, cumsum('initiationCountAngle', include_zero=True), cumsum('initiationCountAngle'),
                             'Conversations initiated by participant',
                             [('Participant', '@sender'), ('Conversations initiated', '@f_initiationCount')])
 
@@ -171,6 +192,8 @@ def daily_stats_tab(convoStats):
         newPieSrc = make_piechart_dataset(newValue)
         pieSrc.data.update(newPieSrc.data)
 
+        messageColumn.children = make_messages_paragraphs(newValue)
+
     def on_date_range_changed(attr, old, new):
         convoToPlot = convoSelection.value
         startDate, endDate = dateSlider.value_as_date
@@ -180,6 +203,8 @@ def daily_stats_tab(convoStats):
         src.data.update(new_src.data)
         newPieSrc = make_piechart_dataset(convoToPlot, startDate, endDate)
         pieSrc.data.update(newPieSrc.data)
+
+        messageColumn.children = make_messages_paragraphs(convoToPlot, startDate, endDate)
 
     # A dropdown list to select a conversation
     conversationTitles = sorted([x.title for x in convoStats])
@@ -204,9 +229,13 @@ def daily_stats_tab(convoStats):
     pieSrc = make_piechart_dataset(conversationTitles[0], start, end)
     piePlots = make_piechart_plots(pieSrc)
 
+    messageContents = make_messages_paragraphs(
+        conversationTitles[0], start, end)
+
+    messageColumn = column(children=messageContents, height=670, width=310, css_classes=['scrollable'])
     # Wrap all controls with a single element
     controls = column(convoSelection, dateSlider)
-    layout = row(controls, p, piePlots)
+    layout = row(controls, p, piePlots, messageColumn)
     tab = Panel(child=layout, title='Daily statistics')
 
     return tab
