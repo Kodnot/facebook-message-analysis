@@ -124,7 +124,7 @@ def daily_stats_tab(convoStats):
             rez.append(
                 f'{message.sender} ({message.datetime.strftime("%Y/%m/%d %H:%M")}): {message.content}')
 
-        return [Paragraph(text=x, width=290) for x in rez]
+        return [Paragraph(text=x) for x in rez]
 
     def make_timeseries_plot(src):
         p = figure(plot_width=600, plot_height=600, title='Daily message counts by date',
@@ -257,7 +257,7 @@ def daily_stats_tab(convoStats):
         conversationTitles[0], start, end)
 
     messageColumn = column(children=messageContents,
-                           height=670, width=310, css_classes=['scrollable'])
+                           height=670, css_classes=['scrollable'], sizing_mode='stretch_width')
     # Wrap all controls with a single element
     controls = column(convoSelection, dateSlider)
     layout = row(controls, p, piePlots, messageColumn)
