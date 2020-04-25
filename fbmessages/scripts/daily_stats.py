@@ -123,13 +123,14 @@ def daily_stats_tab(convoStats):
             allMessages = list(filter(lambda m: m.datetime.date() >=
                                       startDate and m.datetime.date() <= endDate, allMessages))
 
-        # TODO: Div doesn't break long text like Paragraph did, find a way to fix this
-        rez = ''
+        # TODO: A single long word will make the div ignore width settings and overflow the window
+        rez = '<p style="overflow-wrap:break-word;width:95%;">'
         for i, message in enumerate(allMessages):
             if i > 500:
                 break
             rez += f'<b>{message.sender}</b> <i>({message.datetime.strftime("%Y/%m/%d %H:%M")})</i>: {message.content} </br>'
-        return Div(text=rez)
+        rez += '</p>'
+        return Div(text=rez, sizing_mode='stretch_width')
 
     def make_timeseries_plot(src, tooltipSrc):
         p = figure(plot_width=600, plot_height=600, title='Daily message counts by date',
@@ -250,7 +251,7 @@ def daily_stats_tab(convoStats):
     start = pd.to_datetime(initialDates[0]).date()
     end = pd.to_datetime(initialDates[-1]).date()
     dateSlider = DateRangeSlider(
-        title='Date interval:', start=start, end=date.today(), value=(start, end), step=1)
+        title='Date interval', start=start, end=date.today(), value=(start, end), step=24*60*60*1000)
     dateSlider.on_change('value_throttled', on_date_range_changed)
 
     src, tooltipSrc = make_timeseries_datasets(
