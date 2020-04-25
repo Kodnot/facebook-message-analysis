@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import datetime
 from math import pi
+from itertools import chain
 
 from datetime import date
 from collections import defaultdict
@@ -20,18 +21,19 @@ from scripts.analyser import ConvoStats
 def daily_stats_tab(convoStats):
 
     # Daily by-party and total message counts
-    def make_timeseries_dataset(convoTitle, startDate=None, endDate=None):
+    def make_timeseries_datasets(convoTitle, startDate=None, endDate=None):
         convo: analyser.ConvoStats = next(
             (x for x in convoStats if x.title == convoTitle))
         participants = list(convo.countsBySender.keys())
         participantToId = {x: i for i, x in enumerate(participants)}
         totalsId = len(participants)
+        participantToId['Total'] = totalsId
 
         xs = [[] for _ in participants] + [[]]
         ys = [[] for _ in participants] + [[]]
         color = Category10_7 if len(participants) <= 7 else Turbo256
         colors = [color[i] for i in range(len(participants)+1)]
-        labels = participants + ['total']
+        labels = participants + ['Total']
 
         for date in convo.dailyCountsBySender.keys():
             convertedDate = pd.to_datetime(date)
@@ -47,16 +49,22 @@ def daily_stats_tab(convoStats):
             xs[totalsId].append(convertedDate)
             ys[totalsId].append(sum(convo.dailyCountsBySender[date].values()))
 
-        return ColumnDataSource(data={'x': xs, 'y': ys, 'color': colors, 'label': labels})
+        # I need an invisible scatterplot for nice tooltips, because multiline tooltips don't work well
+        totalX = list(chain.from_iterable(xs))
+        totalY = list(chain.from_iterable(ys))
+        totalLabels = list(chain.from_iterable(
+            [[x]*len(xs[participantToId[x]]) for x in labels]))
+
+        return (ColumnDataSource(data={'x': xs, 'y': ys, 'color': colors, 'label': labels}),
+                ColumnDataSource(data={'x': totalX, 'y': totalY, 'label': totalLabels}))
 
     def make_piechart_dataset(convoTitle, startDate=None, endDate=None):
         convo: analyser.ConvoStats = next(
             (x for x in convoStats if x.title == convoTitle))
 
         df = pd.DataFrame(columns=[
-                          'sender', 'messageCount', 'messageCountAngle', 'f_messageCount',
-                          'wordCount', 'wordCountAngle', 'f_wordCount',
-                          'initiationCount', 'initiationCountAngle', 'f_initiationCount', 'color'])
+            'sender', 'messageCount', 'messageCountAngle', 'f_messageCount',
+            'wordCount', 'wordCountAngle', 'f_wordCount', 'initiationCount', 'initiationCountAngle', 'f_initiationCount', 'color'])
         color = Category10_7 if len(convo.countsBySender) <= 7 else Turbo256
 
         allMessages = convo.messages
@@ -126,20 +134,19 @@ def daily_stats_tab(convoStats):
 
         return [Paragraph(text=x) for x in rez]
 
-    def make_timeseries_plot(src):
+    def make_timeseries_plot(src, tooltipSrc):
         p = figure(plot_width=600, plot_height=600, title='Daily message counts by date',
                    x_axis_type='datetime', x_axis_label='Date', y_axis_label='Message count')
 
         p.multi_line(xs='x', ys='y', source=src, color='color',
                      line_width=3, legend_field='label', line_alpha=0.4)
 
-        # TODO: Don't know how to get the value of the multiline line, workaround with scatterplot on top?
-        # TODO: That would also work better with the dates, because now I have misleading tooltips
-        hover = HoverTool(tooltips=[('Count from', '@label'),
-                                    ('Date', '$x{%F}'),
-                                    ('Message count:', '???')],
-                          formatters={'$x': 'datetime'},
+        tooltipScatter = p.scatter('x', 'y', source=tooltipSrc, alpha=0)
+        hover = HoverTool(tooltips=[('Message count', '@y'),
+                                    ('Details', '@x{%F}, @label')],
+                          formatters={'@x': 'datetime'},
                           mode='vline')  # vline means that tooltip will be shown when mouse is in a vertical line above glyph
+        hover.renderers = [tooltipScatter]
         p.add_tools(hover)
 
         return p
@@ -206,8 +213,9 @@ def daily_stats_tab(convoStats):
         dateSlider.value = (start, end)
 
         # TODO: There is some black magic going on here, find if there is a proper way to do this
-        newScr = make_timeseries_dataset(newValue)
+        newScr, newTooltipSrc = make_timeseries_datasets(newValue)
         src.data.update(newScr.data)
+        tooltipSrc.data.update(newTooltipSrc.data)
         newPieSrc = make_piechart_dataset(newValue)
         pieSrc.data.update(newPieSrc.data)
 
@@ -220,8 +228,10 @@ def daily_stats_tab(convoStats):
         startDate, endDate = dateSlider.value_as_date
 
         # TODO: There is some black magic going on here, find if there is a proper way to do this
-        new_src = make_timeseries_dataset(convoToPlot, startDate, endDate)
+        new_src, newTooltipSrc = make_timeseries_datasets(
+            convoToPlot, startDate, endDate)
         src.data.update(new_src.data)
+        tooltipSrc.data.update(newTooltipSrc.data)
         newPieSrc = make_piechart_dataset(convoToPlot, startDate, endDate)
         pieSrc.data.update(newPieSrc.data)
 
@@ -246,8 +256,9 @@ def daily_stats_tab(convoStats):
         title='Date interval:', start=start, end=date.today(), value=(start, end), step=1)
     dateSlider.on_change('value_throttled', on_date_range_changed)
 
-    src = make_timeseries_dataset(conversationTitles[0], start, end)
-    p = make_timeseries_plot(src)
+    src, tooltipSrc = make_timeseries_datasets(
+        conversationTitles[0], start, end)
+    p = make_timeseries_plot(src, tooltipSrc)
     p = style(p)
 
     pieSrc = make_piechart_dataset(conversationTitles[0], start, end)
