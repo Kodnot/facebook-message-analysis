@@ -9,7 +9,7 @@ from datetime import date
 from collections import defaultdict
 from bokeh.layouts import column, row
 from bokeh.plotting import figure
-from bokeh.models import ColumnDataSource, HoverTool, Select, Panel, DateRangeSlider, Paragraph, Title
+from bokeh.models import ColumnDataSource, HoverTool, Select, Panel, DateRangeSlider, Div, Title
 from bokeh.transform import cumsum
 
 from bokeh.palettes import Category10_7, Turbo256
@@ -114,7 +114,7 @@ def daily_stats_tab(convoStats):
 
         return ColumnDataSource(df)
 
-    def make_messages_paragraphs(convoTitle, startDate=None, endDate=None):
+    def make_messages_display(convoTitle, startDate=None, endDate=None):
         convo: analyser.ConvoStats = next(
             (x for x in convoStats if x.title == convoTitle))
 
@@ -123,16 +123,13 @@ def daily_stats_tab(convoStats):
             allMessages = list(filter(lambda m: m.datetime.date() >=
                                       startDate and m.datetime.date() <= endDate, allMessages))
 
-        rez = []
+        # TODO: Div doesn't break long text like Paragraph did, find a way to fix this
+        rez = ''
         for i, message in enumerate(allMessages):
-            # TODO: The browser will crawl to a stop if I have too many messages
-            # 500 messages take good 10 seconds to load
-            if i > 100:
+            if i > 500:
                 break
-            rez.append(
-                f'{message.sender} ({message.datetime.strftime("%Y/%m/%d %H:%M")}): {message.content}')
-
-        return [Paragraph(text=x) for x in rez]
+            rez += f'<b>{message.sender}</b> <i>({message.datetime.strftime("%Y/%m/%d %H:%M")})</i>: {message.content} </br>'
+        return Div(text=rez)
 
     def make_timeseries_plot(src, tooltipSrc):
         p = figure(plot_width=600, plot_height=600, title='Daily message counts by date',
@@ -221,7 +218,7 @@ def daily_stats_tab(convoStats):
 
         _update_pie_bottom_labels()
 
-        messageColumn.children = make_messages_paragraphs(newValue)
+        messageColumn.children = [make_messages_display(newValue)]
 
     def on_date_range_changed(attr, old, new):
         convoToPlot = convoSelection.value
@@ -237,8 +234,8 @@ def daily_stats_tab(convoStats):
 
         _update_pie_bottom_labels()
 
-        messageColumn.children = make_messages_paragraphs(
-            convoToPlot, startDate, endDate)
+        messageColumn.children = [make_messages_display(
+            convoToPlot, startDate, endDate)]
 
     # A dropdown list to select a conversation
     conversationTitles = sorted([x.title for x in convoStats])
@@ -264,8 +261,8 @@ def daily_stats_tab(convoStats):
     pieSrc = make_piechart_dataset(conversationTitles[0], start, end)
     piePlots = make_piechart_plots(pieSrc)
 
-    messageContents = make_messages_paragraphs(
-        conversationTitles[0], start, end)
+    messageContents = [make_messages_display(
+        conversationTitles[0], start, end)]
 
     messageColumn = column(children=messageContents,
                            height=670, css_classes=['scrollable'], sizing_mode='stretch_width')
