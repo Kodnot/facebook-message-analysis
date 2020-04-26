@@ -164,7 +164,7 @@ def analyze(filenames):
 
         # Process content of the message if it has any
         if 'content' in message:
-            content = unidecode(message['content'])
+            content = message['content']
             processedMessages.append(Message(message['sender_name'], date, content))
             # Rudimentary sentiment analysis using VADER
             sentiments = sentiment_analyzer.polarity_scores(content)
