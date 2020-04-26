@@ -31,12 +31,13 @@ class Message:
 class ConvoStats:
     def __init__(self, title):
         self.title = title
-        self.countsBySender = defaultdict(int)
-        self.initiationsBySender = defaultdict(int)
-        self.totalMessages = 0
-        self.dailyCountsBySender = {}
-        self.messages = []
         self.participants = set()
+        self.messages = []
+        self.dailyCountsBySender = {}
+        
+        self.totalMessages = 0
+        self.initiationsBySender = defaultdict(int)
+        self.countsBySender = defaultdict(int)
 
     def __str__(self):
         rez = f'Convo: {self.title}, total messages: {self.totalMessages}\n'

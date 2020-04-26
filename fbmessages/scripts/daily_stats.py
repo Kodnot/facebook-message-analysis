@@ -31,9 +31,9 @@ def daily_stats_tab(convoStats):
 
         xs = [[] for _ in participants] + [[]]
         ys = [[] for _ in participants] + [[]]
-        color = Category10_7 if len(participants) <= 7 else Turbo256
+        color = Category10_7 if len(participants) < 7 else Turbo256
         colors = [color[i] for i in range(len(participants)+1)]
-        labels = list(participants | {'Total'})
+        labels = sorted(participants) + ['Total']
 
         for date in convo.dailyCountsBySender.keys():
             convertedDate = pd.to_datetime(date)
@@ -87,7 +87,7 @@ def daily_stats_tab(convoStats):
                     initiationsBySender[message.sender] += 1
         totalInitiationCount = sum(initiationsBySender.values())
 
-        for i, participant in enumerate(convo.participants):
+        for i, participant in enumerate(sorted(convo.participants)):
             messages = list(filter(lambda m: m.sender ==
                                    participant, allMessages))
 
@@ -184,11 +184,14 @@ def daily_stats_tab(convoStats):
                     convoPauseBetweenMessagesSum += timeDiff.total_seconds()
                     convoMessageCount += 1
                     
-
+        # In some edge cases there may be no messages sent to the participant
+        if convoCount == 0:
+            return ''
+        
         hours, minutes = divmod(convoDurationSum/convoCount, 60*60)
         rez = '<p style="width:95%;">'
         rez += f'Average conversation duration: {hours:.0f} h {minutes // 60:.0f} min</br>'
-        if convoCount > 1:
+        if convoCount > 2:
             hours, minutes = divmod(
                 pauseBetweenConvosDurationSum/(convoCount-1), 60*60)
             rez += f'Average pause between conversations duration: {hours:.0f} h {minutes // 60:.0f} min</br>'
