@@ -24,7 +24,7 @@ def daily_stats_tab(convoStats):
     def make_timeseries_datasets(convoTitle, startDate=None, endDate=None):
         convo: analyser.ConvoStats = next(
             (x for x in convoStats if x.title == convoTitle))
-        participants = list(convo.countsBySender.keys())
+        participants = convo.participants
         participantToId = {x: i for i, x in enumerate(participants)}
         totalsId = len(participants)
         participantToId['Total'] = totalsId
@@ -33,7 +33,7 @@ def daily_stats_tab(convoStats):
         ys = [[] for _ in participants] + [[]]
         color = Category10_7 if len(participants) <= 7 else Turbo256
         colors = [color[i] for i in range(len(participants)+1)]
-        labels = participants + ['Total']
+        labels = list(participants | {'Total'})
 
         for date in convo.dailyCountsBySender.keys():
             convertedDate = pd.to_datetime(date)
@@ -65,14 +65,14 @@ def daily_stats_tab(convoStats):
         df = pd.DataFrame(columns=[
             'sender', 'messageCount', 'messageCountAngle', 'f_messageCount',
             'wordCount', 'wordCountAngle', 'f_wordCount', 'initiationCount', 'initiationCountAngle', 'f_initiationCount', 'color'])
-        color = Category10_7 if len(convo.countsBySender) <= 7 else Turbo256
+        color = Category10_7 if len(convo.participants) <= 7 else Turbo256
 
         allMessages = convo.messages
         if startDate is not None and endDate is not None:
             allMessages = list(filter(lambda m: m.datetime.date() >=
                                       startDate and m.datetime.date() <= endDate, allMessages))
         totalWordCount = sum(len(x.content.split()) for x in allMessages)
-        participantCount = len(list(convo.countsBySender.keys()))
+        participantCount = len(convo.participants)
 
         initiationsBySender = defaultdict(int)
         for i, message in enumerate(allMessages):
@@ -87,7 +87,7 @@ def daily_stats_tab(convoStats):
                     initiationsBySender[message.sender] += 1
         totalInitiationCount = sum(initiationsBySender.values())
 
-        for i, participant in enumerate(convo.countsBySender.keys()):
+        for i, participant in enumerate(convo.participants):
             messages = list(filter(lambda m: m.sender ==
                                    participant, allMessages))
 
@@ -131,6 +131,76 @@ def daily_stats_tab(convoStats):
             rez += f'<b>{message.sender}</b> <i>({message.datetime.strftime("%Y/%m/%d %H:%M")})</i>: {message.content} </br>'
         rez += '</p>'
         return Div(text=rez, sizing_mode='stretch_width')
+
+    # Statistics for the conversations in the selected date range like average message length
+    def make_stats_text(convoTitle, startDate=None, endDate=None):
+        convo: analyser.ConvoStats = next(
+            (x for x in convoStats if x.title == convoTitle))
+
+        allMessages = convo.messages
+        if startDate is not None and endDate is not None:
+            allMessages = list(filter(lambda m: m.datetime.date() >=
+                                      startDate and m.datetime.date() <= endDate, allMessages))
+
+        totalMessageLensWords = defaultdict(int)
+        messageCountsByParticipant = defaultdict(int)
+        convoDurationSum = 0
+        convoLenWordsSum = 0
+        pauseBetweenConvosDurationSum = 0
+        pauseBetweenMessagesInConvoSum = 0
+
+        lastConvoStart = allMessages[0].datetime
+        convoWordCount = len(allMessages[0].content.split())
+        convoCount = 0
+        convoMessageCount = 1
+        convoPauseBetweenMessagesSum = 0
+        
+        for i, message in enumerate(allMessages):
+            wordCount = len(message.content.split())
+            totalMessageLensWords[message.sender] += wordCount
+            messageCountsByParticipant[message.sender] += 1
+            totalMessageLensWords['total'] += wordCount
+
+            if i != 0:
+                timeDiff = message.datetime - allMessages[i-1].datetime
+                hoursPassed = timeDiff.total_seconds() // (60*60)
+                if hoursPassed >= 4:
+                    # A new conversation has begun
+                    convoDuration = (
+                        allMessages[i-1].datetime - lastConvoStart).total_seconds()
+                    convoDurationSum += convoDuration
+                    convoCount += 1
+                    convoLenWordsSum += convoWordCount
+                    pauseDuration = timeDiff.total_seconds()
+                    pauseBetweenConvosDurationSum += pauseDuration
+                    pauseBetweenMessagesInConvoSum += convoPauseBetweenMessagesSum / convoMessageCount
+                    convoMessageCount = 1
+                    convoPauseBetweenMessagesSum = 0
+                
+                    convoWordCount = wordCount
+                    lastConvoStart = message.datetime
+                else:
+                    convoWordCount += wordCount
+                    convoPauseBetweenMessagesSum += timeDiff.total_seconds()
+                    convoMessageCount += 1
+                    
+
+        hours, minutes = divmod(convoDurationSum/convoCount, 60*60)
+        rez = '<p style="width:95%;">'
+        rez += f'Average conversation duration: {hours:.0f} h {minutes // 60:.0f} min</br>'
+        if convoCount > 1:
+            hours, minutes = divmod(
+                pauseBetweenConvosDurationSum/(convoCount-1), 60*60)
+            rez += f'Average pause between conversations duration: {hours:.0f} h {minutes // 60:.0f} min</br>'
+        rez += f'Average conversation length: {len(allMessages) / convoCount:.1f} messages, {convoLenWordsSum // convoCount} words</br>'
+        minutes, seconds = divmod(convoPauseBetweenMessagesSum/convoCount, 60)
+        rez += f'Average time between messages in a conversation: {minutes:.1f} min {seconds:.1f} s</br>'
+        rez += f'Average message length: {totalMessageLensWords["total"] // len(allMessages)} words</br>'
+        for participant in convo.participants:
+            rez += f'Average length of messages from {participant}: {totalMessageLensWords[participant] // messageCountsByParticipant[participant]} words</br>'
+        rez += '</p>'
+
+        return rez
 
     def make_timeseries_plot(src, tooltipSrc):
         p = figure(plot_width=600, plot_height=600, title='Daily message counts by date',
@@ -221,6 +291,8 @@ def daily_stats_tab(convoStats):
 
         messageColumn.children = [make_messages_display(newValue)]
 
+        statsDisplay.text = make_stats_text(newValue)
+
     def on_date_range_changed(attr, old, new):
         convoToPlot = convoSelection.value
         startDate, endDate = dateSlider.value_as_date
@@ -237,6 +309,8 @@ def daily_stats_tab(convoStats):
 
         messageColumn.children = [make_messages_display(
             convoToPlot, startDate, endDate)]
+
+        statsDisplay.text = make_stats_text(convoToPlot, startDate, endDate)
 
     # A dropdown list to select a conversation
     conversationTitles = sorted([x.title for x in convoStats])
@@ -267,9 +341,14 @@ def daily_stats_tab(convoStats):
 
     messageColumn = column(children=messageContents,
                            height=670, css_classes=['scrollable'], sizing_mode='stretch_width')
-    # Wrap all controls with a single element
-    controls = column(convoSelection, dateSlider)
-    layout = row(controls, p, piePlots, messageColumn)
+
+    statsDisplay = Div(text=make_stats_text(conversationTitles[0], start, end))
+    statsColumn = column(children=[statsDisplay],
+                         height=540, css_classes=['scrollable'])
+
+    # create layout
+    leftColumn = column(convoSelection, dateSlider, statsColumn)
+    layout = row(leftColumn, p, piePlots, messageColumn)
     tab = Panel(child=layout, title='Daily statistics')
 
     return tab

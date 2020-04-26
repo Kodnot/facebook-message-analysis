@@ -36,6 +36,7 @@ class ConvoStats:
         self.totalMessages = 0
         self.dailyCountsBySender = {}
         self.messages = []
+        self.participants = set()
 
     def __str__(self):
         rez = f'Convo: {self.title}, total messages: {self.totalMessages}\n'
@@ -121,9 +122,11 @@ def analyze(filenames):
     word_frequencies = defaultdict(int)
     first_date = None
     last_date = None
+    participants = set()
 
     # Extract information from the messages
     for id, message in enumerate(messages):
+        participants.add(message['sender_name'])
         # Convert message's Unix timestamp to local datetime
         date = datetime.datetime.fromtimestamp(message['timestamp_ms']/1000.0)
         month = date.strftime('%Y-%m')
@@ -205,6 +208,7 @@ def analyze(filenames):
     rezStats.totalMessages = len(messages)
     rezStats.dailyCountsBySender = dailyCountsBySender
     rezStats.messages = processedMessages
+    rezStats.participants = participants
 
     print('Preparing data for display ...')
 
