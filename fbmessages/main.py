@@ -11,6 +11,7 @@ from scripts.analyser import analyseAll
 from scripts.daily_stats import daily_stats_tab
 from scripts.total_stats import total_stats_tab
 from scripts.categorical_stats import categorical_stats_tab
+from scripts.misc_stats import misc_stats_tab
 
 # attach to VS Code debugger if this script was run with BOKEH_VS_DEBUG=true
 if 'BOKEH_VS_DEBUG' in os.environ and os.environ['BOKEH_VS_DEBUG'] == 'true':
@@ -27,10 +28,11 @@ allConvoStats = analyseAll(args.folder)
 
 tab1 = daily_stats_tab(allConvoStats)
 tab2 = categorical_stats_tab(allConvoStats)
-tab3 = total_stats_tab(allConvoStats)
+tab3 = misc_stats_tab(allConvoStats)
+tab4 = total_stats_tab(allConvoStats)
 
 # Put all tabs into one app
-tabs = Tabs(tabs=[tab1, tab2, tab3])
+tabs = Tabs(tabs=[tab1, tab2, tab3, tab4])
 
 # Put the tabs in the current document for display
 curdoc().add_root(tabs)

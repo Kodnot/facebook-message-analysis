@@ -37,6 +37,8 @@ class ConvoStats:
         self.monthlyCounts = defaultdict(int)
         self.dayNameCounts = defaultdict(int)
         self.hourlyCounts = defaultdict(int)
+        self.dailySentiments = defaultdict(float)
+        self.wordFrequencies = []
         
         self.totalMessages = 0
         self.initiationsBySender = defaultdict(int)
@@ -172,7 +174,7 @@ def analyze(filenames):
             processedMessages.append(Message(message['sender_name'], date, content))
             # Rudimentary sentiment analysis using VADER
             sentiments = sentiment_analyzer.polarity_scores(content)
-            daily_sentiments[day] += sentiments['pos'] - sentiments['neg']
+            daily_sentiments[day] += sentiments['compound']
 
             # Split message up by spaces to get individual words
             for word in content.split(' '):
@@ -216,40 +218,14 @@ def analyze(filenames):
     rezStats.monthlyCounts = monthly_counts
     rezStats.dayNameCounts = day_name_counts
     rezStats.hourlyCounts = hourly_counts
+    rezStats.dailySentiments = daily_sentiments
+    rezStats.wordFrequencies = word_frequencies
 
     print('Preparing data for display ...')
 
-    xdata_sentiment = sorted(list(daily_sentiments.keys()))
-    ydata_sentiment = [daily_sentiments[x] for x in xdata_sentiment]
     xdata_top_words, ydata_top_words = zip(*top_words)
 
     print('Displaying ...')
-
-    # Generate subplots
-    def show_daily_sentiment_graph(ax, xdata, ydata):
-        indices = np.arange(len(xdata))
-
-        ax.plot(indices, ydata,
-                alpha=1.0, color='darkseagreen',
-                label='VADER sentiment')
-
-        ax.set_xlabel('Date')
-        ax.set_ylabel('Sentiment')
-        ax.set_title('Average sentiment over time')
-
-        num_ticks = 16 if len(indices) >= 16 else len(indices)
-        tick_spacing = round(len(indices) / num_ticks)
-        ticks = [tick_spacing *
-                 i for i in range(num_ticks) if tick_spacing * i < len(xdata)]
-        tick_labels = [xdata[tick] for tick in ticks]
-
-        ax.set_xticks(ticks)
-        ax.set_xticklabels(tick_labels)
-        for tick in ax.get_xticklabels():
-            tick.set_rotation(30)
-        ax.set_ylim([-1.0, 1.0])
-
-        ax.legend()
 
     def show_top_words_graph(ax, xdata, ydata):
         indices = np.arange(len(xdata))
@@ -268,7 +244,6 @@ def analyze(filenames):
         ax.set_yticklabels(xdata)
 
     # Call the graphing methods
-    # show_daily_sentiment_graph(ax_array[0][2], xdata_sentiment, ydata_sentiment)
     # show_top_words_graph(ax_array[1][2], xdata_top_words[::-1], ydata_top_words[::-1])
 
     # Display the plots

@@ -200,6 +200,8 @@ def daily_stats_tab(convoStats):
         rez += f'Average time between messages in a conversation: {minutes:.1f} min {seconds:.1f} s</br>'
         rez += f'Average message length: {totalMessageLensWords["total"] // len(allMessages)} words</br>'
         for participant in convo.participants:
+            if messageCountsByParticipant[participant] == 0:
+                continue
             rez += f'Average length of messages from {participant}: {totalMessageLensWords[participant] // messageCountsByParticipant[participant]} words</br>'
         rez += '</p>'
 
