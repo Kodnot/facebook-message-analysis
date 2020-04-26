@@ -34,6 +34,9 @@ class ConvoStats:
         self.participants = set()
         self.messages = []
         self.dailyCountsBySender = {}
+        self.monthlyCounts = defaultdict(int)
+        self.dayNameCounts = defaultdict(int)
+        self.hourlyCounts = defaultdict(int)
         
         self.totalMessages = 0
         self.initiationsBySender = defaultdict(int)
@@ -210,22 +213,12 @@ def analyze(filenames):
     rezStats.dailyCountsBySender = dailyCountsBySender
     rezStats.messages = processedMessages
     rezStats.participants = participants
+    rezStats.monthlyCounts = monthly_counts
+    rezStats.dayNameCounts = day_name_counts
+    rezStats.hourlyCounts = hourly_counts
 
     print('Preparing data for display ...')
 
-    # Format data for graphing
-    xdata_daily = sorted(list(daily_counts.keys()))
-    ydata_daily = [daily_counts[x] for x in xdata_daily]
-    ydata_daily_stickers = [daily_sticker_counts[x] for x in xdata_daily]
-    xdata_monthly = sorted(list(monthly_counts.keys()))
-    ydata_monthly = [monthly_counts[x] for x in xdata_monthly]
-    ydata_monthly_stickers = [monthly_sticker_counts[x] for x in xdata_monthly]
-    xdata_day_name = ['Sunday', 'Monday', 'Tuesday',
-                      'Wednesday', 'Thursday', 'Friday', 'Saturday']
-    ydata_day_name = [float(day_name_counts[x]) /
-                      num_days * 7 for x in xdata_day_name]
-    xdata_hourly = ['{0}:00'.format(i) for i in range(24)]
-    ydata_hourly = [float(hourly_counts[x]) / num_days for x in range(24)]
     xdata_sentiment = sorted(list(daily_sentiments.keys()))
     ydata_sentiment = [daily_sentiments[x] for x in xdata_sentiment]
     xdata_top_words, ydata_top_words = zip(*top_words)
@@ -233,92 +226,6 @@ def analyze(filenames):
     print('Displaying ...')
 
     # Generate subplots
-    # fig, ax_array = plt.subplots(2, 3)
-
-    def show_daily_total_graph(ax, xdata, ydata, ydata_stickers):
-        indices = np.arange(len(xdata))
-
-        ax.plot(indices, ydata,
-                alpha=1.0, color='dodgerblue',
-                label='All messages')
-
-        ax.plot(indices, ydata_stickers,
-                alpha=1.0, color='orange',
-                label='Facebook stickers')
-
-        ax.set_xlabel('Date')
-        ax.set_ylabel('Count')
-        ax.set_title('Number of messages exchanged every day')
-
-        num_ticks = 16 if len(indices) >= 16 else len(indices)
-        tick_spacing = round(len(indices) / num_ticks)
-        ticks = [tick_spacing *
-                 i for i in range(num_ticks) if tick_spacing * i < len(xdata)]
-        tick_labels = [xdata[tick] for tick in ticks]
-
-        ax.set_xticks(ticks)
-        ax.set_xticklabels(tick_labels)
-        for tick in ax.get_xticklabels():
-            tick.set_rotation(30)
-
-        ax.legend()
-
-    def show_monthly_total_graph(ax, xdata, ydata, ydata_stickers):
-        indices = np.arange(len(xdata))
-
-        ax.bar(indices, ydata,
-               alpha=1.0, color='dodgerblue',
-               label='All messages')
-
-        ax.bar(indices, ydata_stickers,
-               alpha=1.0, color='orange',
-               label='Facebook stickers')
-
-        ax.set_xlabel('Date')
-        ax.set_ylabel('Count')
-        ax.set_title('Number of messages exchanged every month')
-
-        ax.set_xticks(indices)
-        ax.set_xticklabels(xdata)
-        for tick in ax.get_xticklabels():
-            tick.set_rotation(30)
-
-        ax.legend()
-
-    def show_day_name_average_graph(ax, xdata, ydata):
-        indices = np.arange(len(xdata))
-        bar_width = 0.6
-
-        ax.bar(indices, ydata, bar_width,
-               alpha=1.0, color='dodgerblue',
-               align='center',
-               label='All messages')
-
-        ax.set_xlabel('Day of the Week')
-        ax.set_ylabel('Count')
-        ax.set_title('Average number of messages every day of the week')
-
-        ax.set_xticks(indices)
-        ax.set_xticklabels(xdata)
-
-    def show_hourly_average_graph(ax, xdata, ydata):
-        indices = np.arange(len(xdata))
-        bar_width = 0.8
-
-        ax.bar(indices, ydata, bar_width,
-               alpha=1.0, color='dodgerblue',
-               align='center',
-               label='All messages')
-
-        ax.set_xlabel('Hour')
-        ax.set_ylabel('Count')
-        ax.set_title('Average number of messages every hour of the day')
-
-        ax.set_xticks(indices)
-        ax.set_xticklabels(xdata)
-        for tick in ax.get_xticklabels():
-            tick.set_rotation(30)
-
     def show_daily_sentiment_graph(ax, xdata, ydata):
         indices = np.arange(len(xdata))
 
@@ -361,11 +268,7 @@ def analyze(filenames):
         ax.set_yticklabels(xdata)
 
     # Call the graphing methods
-    # show_daily_total_graph(ax_array[0][0], xdata_daily, ydata_daily, ydata_daily_stickers)
-    # show_monthly_total_graph(ax_array[0][1], xdata_monthly, ydata_monthly, ydata_monthly_stickers)
     # show_daily_sentiment_graph(ax_array[0][2], xdata_sentiment, ydata_sentiment)
-    # show_day_name_average_graph(ax_array[1][0], xdata_day_name, ydata_day_name)
-    # show_hourly_average_graph(ax_array[1][1], xdata_hourly, ydata_hourly)
     # show_top_words_graph(ax_array[1][2], xdata_top_words[::-1], ydata_top_words[::-1])
 
     # Display the plots
