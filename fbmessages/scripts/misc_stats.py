@@ -7,7 +7,7 @@ from operator import itemgetter
 
 from bokeh.layouts import column, row
 from bokeh.plotting import figure
-from bokeh.models import ColumnDataSource, HoverTool, Select, Panel
+from bokeh.models import ColumnDataSource, HoverTool, Select, Panel, Slider
 
 from scripts.plot_style import style
 
@@ -69,26 +69,35 @@ def misc_stats_tab(convoStats):
         newSentimentSrc = make_sentiment_dataset(newValue)
         sentimentSrc.data.update(newSentimentSrc.data)
 
-        newCommonWordsAllSrc = make_common_words_dataset(newValue)
-        newCommonWordsLongSrc = make_common_words_dataset(newValue, 5)
-        plotRow.children = [sentimentPlot, make_common_words_plot(newCommonWordsAllSrc),
-                            make_common_words_plot(newCommonWordsLongSrc, 5)]
+        newCommonWordsSrc = make_common_words_dataset(
+            newValue, wordLengthSlider.value)
+        plotRow.children = [sentimentPlot, make_common_words_plot(
+            newCommonWordsSrc, wordLengthSlider.value)]
+
+    def on_word_length_changed(attr, oldValue, newValue):
+        newCommonWordsSrc = make_common_words_dataset(
+            convoSelection.value, newValue)
+        plotRow.children = [sentimentPlot, make_common_words_plot(
+            newCommonWordsSrc, newValue)]
 
     convoSelection = Select(title='Conversation to analyse: ',
                             options=conversationTitles, value=conversationTitles[0])
     convoSelection.on_change('value', on_conversation_changed)
 
+    initialWordLength = 5
+    wordLengthSlider = Slider(title='Min word length for common words',
+                              start=0, end=10, value=initialWordLength, step=1)
+    wordLengthSlider.on_change('value_throttled', on_word_length_changed)
+
     sentimentSrc = make_sentiment_dataset(conversationTitles[0])
     sentimentPlot = make_sentiment_plot(sentimentSrc)
 
-    commonWordsAllSrc = make_common_words_dataset(conversationTitles[0])
-    commonWordsAllPlot = make_common_words_plot(commonWordsAllSrc)
+    commonWordsSrc = make_common_words_dataset(
+        conversationTitles[0], initialWordLength)
+    commonWordsPlot = make_common_words_plot(commonWordsSrc, initialWordLength)
 
-    commonWordsLongSrc = make_common_words_dataset(conversationTitles[0], 5)
-    commonWordsLongPlot = make_common_words_plot(commonWordsLongSrc, 5)
-
-    plotRow = row(sentimentPlot, commonWordsAllPlot, commonWordsLongPlot)
-    layout = column(row(convoSelection), plotRow)
+    plotRow = row(sentimentPlot, commonWordsPlot)
+    layout = column(row(convoSelection, wordLengthSlider), plotRow)
     tab = Panel(child=layout, title='Misc statistics')
 
     return tab
