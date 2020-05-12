@@ -257,7 +257,7 @@ def analyze(filenames):
 def analyseAll(folderName):
     rez = []
     for dirName, subdirList, fileList in os.walk(folderName):
-        messageFiles = glob.glob(os.path.join(dirName, 'message*'))
+        messageFiles = glob.glob(os.path.join(dirName, 'message*.json'))
         if len(messageFiles) > 0:
             convoStats = analyze(messageFiles)
             if convoStats is not None:
