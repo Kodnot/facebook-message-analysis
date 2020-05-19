@@ -75,6 +75,8 @@ def daily_stats_tab(convoStats, convoSelection):
         participantCount = len(convo.participants)
 
         initiationsBySender = defaultdict(int)
+        curConvoParticipants = set()
+        lastMessage = ''
         for i, message in enumerate(allMessages):
             if i == 0:
                 # first message, so conversation initiated
@@ -83,8 +85,13 @@ def daily_stats_tab(convoStats, convoSelection):
                 timeDiff = message.datetime - allMessages[i-1].datetime
                 # It is assumed that if 4h passed since last message, a new conversation has been initiated
                 hoursPassed = timeDiff.total_seconds() // (60*60)
-                if hoursPassed >= 4:
+                # Extra conditions: if the last convo only had one participant or the last message was a question, don't count a new initiation
+                # TODO: Perhaps I should apply the same checks when calculating conversation stats, though for durations between messages etc just the time check is probably better
+                if hoursPassed >= 4 and '?' not in lastMessage and len(curConvoParticipants) > 1:
                     initiationsBySender[message.sender] += 1
+                    curConvoParticipants = set()
+            lastMessage = message.content
+            curConvoParticipants |= {message.sender}
         totalInitiationCount = sum(initiationsBySender.values())
 
         for i, participant in enumerate(sorted(convo.participants)):
