@@ -34,7 +34,7 @@ class ConvoStats:
         self.participants = set()
         self.messages = []
         self.dailyCountsBySender = {}
-        self.monthlyCounts = defaultdict(int)
+        self.monthlyCountsBySender = {}
         self.dayNameCounts = defaultdict(int)
         self.hourlyCounts = defaultdict(int)
         self.dailySentiments = defaultdict(float)
@@ -118,10 +118,10 @@ def analyze(filenames):
     daily_counts = defaultdict(int)
 
     dailyCountsBySender = {}
+    monthlyCountsBySender = {}
 
     daily_sticker_counts = defaultdict(int)
     daily_sentiments = defaultdict(float)
-    monthly_counts = defaultdict(int)
     monthly_sticker_counts = defaultdict(int)
     hourly_counts = defaultdict(int)
     day_name_counts = defaultdict(int)
@@ -162,8 +162,11 @@ def analyze(filenames):
         if day not in dailyCountsBySender:
             dailyCountsBySender[day] = defaultdict(int)
         dailyCountsBySender[day][message['sender_name']] += 1
+        
+        if month not in monthlyCountsBySender:
+            monthlyCountsBySender[month] = defaultdict(int)
+        monthlyCountsBySender[month][message['sender_name']] += 1
 
-        monthly_counts[month] += 1
         if 'sticker' in message:
             daily_sticker_counts[day] += 1
             monthly_sticker_counts[month] += 1
@@ -213,9 +216,9 @@ def analyze(filenames):
     rezStats.initiationsBySender = initiationsBySender
     rezStats.totalMessages = len(messages)
     rezStats.dailyCountsBySender = dailyCountsBySender
+    rezStats.monthlyCountsBySender = monthlyCountsBySender
     rezStats.messages = processedMessages
     rezStats.participants = participants
-    rezStats.monthlyCounts = monthly_counts
     rezStats.dayNameCounts = day_name_counts
     rezStats.hourlyCounts = hourly_counts
     rezStats.dailySentiments = daily_sentiments
