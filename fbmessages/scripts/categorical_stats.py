@@ -1,5 +1,8 @@
 import numpy as np
 import datetime
+from dateutil import rrule
+from datetime import timedelta
+from collections import defaultdict
 from math import pi
 
 from bokeh.layouts import column, row
@@ -16,7 +19,17 @@ def categorical_stats_tab(convoStats, convoSelection):
     def make_monthly_dataset(convoTitle):
         convo = next((x for x in convoStats if x.title == convoTitle))
 
-        xdata_monthly = sorted(list(convo.monthlyCountsBySender.keys()))
+        startDate = convo.messages[0].datetime - timedelta(days=convo.messages[0].datetime.day - 1);
+        endDate = convo.messages[-1].datetime;
+        
+        xdata_monthly = []
+        for dt in rrule.rrule(rrule.MONTHLY, dtstart=startDate, until=endDate):
+            xdata_monthly.append(dt.strftime('%Y-%m'))
+        
+        for month in xdata_monthly:
+            if month not in convo.monthlyCountsBySender:
+                convo.monthlyCountsBySender[month] = defaultdict(int) # need zeros for all participants if no messages were sent that month
+        
         ydata_monthly = {participant: [convo.monthlyCountsBySender[month][participant] for month in xdata_monthly] for participant in convo.participants}
 
         color = Category10_7 if len(convo.participants) < 7 else Category20_20 if len(convo.participants) < 20 else Turbo256
