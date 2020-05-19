@@ -12,7 +12,7 @@ from bokeh.models import ColumnDataSource, HoverTool, Select, Panel, Slider
 from scripts.plot_style import style
 
 
-def misc_stats_tab(convoStats):
+def misc_stats_tab(convoStats, convoSelection):
     conversationTitles = sorted([x.title for x in convoStats])
 
     def make_sentiment_dataset(convoTitle):
@@ -80,8 +80,6 @@ def misc_stats_tab(convoStats):
         plotRow.children = [sentimentPlot, make_common_words_plot(
             newCommonWordsSrc, newValue)]
 
-    convoSelection = Select(title='Conversation to analyse: ',
-                            options=conversationTitles, value=conversationTitles[0])
     convoSelection.on_change('value', on_conversation_changed)
 
     initialWordLength = 5

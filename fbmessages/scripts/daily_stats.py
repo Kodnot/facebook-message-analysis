@@ -18,7 +18,7 @@ from scripts.plot_style import style
 from scripts.analyser import ConvoStats
 
 
-def daily_stats_tab(convoStats):
+def daily_stats_tab(convoStats, convoSelection):
 
     # Daily by-party and total message counts
     def make_timeseries_datasets(convoTitle, startDate=None, endDate=None):
@@ -319,8 +319,6 @@ def daily_stats_tab(convoStats):
 
     # A dropdown list to select a conversation
     conversationTitles = sorted([x.title for x in convoStats])
-    convoSelection = Select(title='Conversation to analyse: ',
-                            options=conversationTitles, value=conversationTitles[0])
     convoSelection.on_change('value', on_conversation_changed)
 
     # A slider to select a date range for the analysis

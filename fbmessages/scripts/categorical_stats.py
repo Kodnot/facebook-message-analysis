@@ -9,7 +9,7 @@ from bokeh.models import ColumnDataSource, HoverTool, Select, Panel
 from scripts.plot_style import style
 
 
-def categorical_stats_tab(convoStats):
+def categorical_stats_tab(convoStats, convoSelection):
     conversationTitles = sorted([x.title for x in convoStats])
 
     def make_monthly_dataset(convoTitle):
@@ -80,8 +80,6 @@ def categorical_stats_tab(convoStats):
                             make_day_name_plot(newDayNameSrc),
                             make_hourly_plot(newHourlySrc)]
 
-    convoSelection = Select(title='Conversation to analyse: ',
-                            options=conversationTitles, value=conversationTitles[0])
     convoSelection.on_change('value', on_conversation_changed)
 
     monthlySrc = make_monthly_dataset(conversationTitles[0])
