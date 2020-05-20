@@ -26,4 +26,6 @@ python
 bokeh serve --show fbmessages/ --args **${FOLDER}**
 ```
 
-In a few seconds, you should get some nice interactive visualizations. Have fun!
+In a few seconds, you should get some nice interactive visualizations. Here's a demo of what the visualizations look like:
+
+![A showcase of the visualizatoins](demo.gif)
